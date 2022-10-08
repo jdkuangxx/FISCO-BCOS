@@ -45,6 +45,7 @@ constexpr const char* const BFS_NAME = "/sys/bfs";
 constexpr const char* const GROUP_SIG_NAME = "/sys/group_sig";
 constexpr const char* const RING_SIG_NAME = "/sys/ring_sig";
 constexpr const char* const DISCRETE_ZKP_NAME = "/sys/discrete_zkp";
+constexpr const char* const CAST_NAME = "/sys/cast_tools";
 
 /// precompiled contract for solidity
 constexpr const char* const SYS_CONFIG_ADDRESS = "0000000000000000000000000000000000001000";
@@ -57,6 +58,7 @@ constexpr const char* const CRYPTO_ADDRESS = "0000000000000000000000000000000000
 constexpr const char* const WORKING_SEALER_MGR_ADDRESS = "000000000000000000000000000000000000100b";
 constexpr const char* const DAG_TRANSFER_ADDRESS = "000000000000000000000000000000000000100c";
 constexpr const char* const BFS_ADDRESS = "000000000000000000000000000000000000100e";
+constexpr const char* const CAST_ADDRESS = "000000000000000000000000000000000000100f";
 constexpr const char* const SYS_ADDRESS_PREFIX = "00000000000000000000000000000000000";
 
 // Contract address related to privacy computing
