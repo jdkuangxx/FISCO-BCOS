@@ -31,7 +31,7 @@ public:
     #undef PUSH_COND
 
     void limit(size_t start, size_t count) { mLimit = std::pair<size_t, size_t>(start, count); }
-    std::pair<size_t, size_t> getLimit() { return mLimit; }
+    std::pair<size_t, size_t> getLimit() const { return {mLimit.first, mLimit.second}; }
 
     bool isValid(const std::vector<std::string>& values) const
     {
