@@ -7,6 +7,7 @@
 #include <string>
 #include <functional>
 #include <iostream>
+#include <assert.h>
 
 #include "Block.h"
 
@@ -42,33 +43,38 @@ public:
         }
     }
 
-    void traverseBuffers(std::function<void(void* data, ssize_t size)> callback) {
+    void rTraverseBuffers(std::function<void(const void* data, ssize_t size)>&& callback) const {
+        for (auto iter = buffers_.rbegin(); iter != buffers_.rend(); ++iter) {
+            callback(iter->data(), iter->size());
+        }    
+    }
+
+    void sTraverseBuffers(std::function<void(const void* data, ssize_t size)>&& callback) const {
         for (auto iter = buffers_.begin(); iter != buffers_.end(); ++iter) {
             callback(iter->data(), iter->size());
         }
     }
 
-    void show() {
+    void show() const {
         int i = 0; 
-        traverseBuffers([&i](void* buffer, ssize_t buf_size){
+        sTraverseBuffers([&i](const void* buffer, ssize_t buf_size) {
             std::cout << "buffer-" << i;
             std::cout << ", buffer_size:" << buf_size << ", buffer:\n";
             for (ssize_t j = 0; j < buf_size; ++j) {
-                std::cout << int(*(reinterpret_cast<uint8_t*>(buffer) + j)) << " ";
+                std::cout << int(*(reinterpret_cast<const uint8_t*>(buffer) + j)) << " ";
             }
             ++i;
             std::cout << std::endl;
         });
     }
 
-    std::vector<uint8_t> flat() {
+    std::vector<uint8_t> flat(ssize_t offset = 0) const {
         std::vector<uint8_t> ret;
-        ret.resize(size_);
-        uint8_t* dest = ret.data();
-        traverseBuffers([&dest](void* buffer, ssize_t buf_size){
-            std::memcpy(dest, buffer, buf_size);
-            dest += buf_size;
-        });
+        if (offset >= size_) {
+            return ret;
+        }
+        ret.resize(size_ - offset);
+        read(ret.data(), ret.size(), offset);
         return ret;
     }
 
@@ -124,13 +130,16 @@ public:
         return true;
     }
 
-    ssize_t read_string(std::string& str, ssize_t offset) {
+    ssize_t read_string(std::string& str, ssize_t offset) const {
         if (str.size() == 0 || offset >= size_) {
             return 0;
         }
         return read(str.data(), str.size(), offset);
     }
- 
+    
+    template<typename BufferType>
+    void write_buffer(const BufferType& buffer);
+
     template<Integral Int>
     void write_int(const Int number) {
         write(&number, sizeof(Int));
@@ -155,10 +164,111 @@ protected:
     ssize_t min_block_size_ = DEFAULT_MIN_BLOCK_SIZE;
 };
 
-// 在发送网络消息的过程中，需要对数据包层层封装，一般是上层的消息包会先序列化，然后作为下层包的payload，在这个过程中payload会被不断拷贝，
-// WriteBuffer是针对这种情况作的优化，在使用时直接调用append方法把消息写到WriteBuffer中，最后再flat即可(也可以分段发送)
+template<typename BufferType>
+class BufferWapper {
+public:
+    BufferWapper(const BufferType& buffer, ssize_t offset) 
+    : buffer_(buffer), offset_(offset) { }
 
+    template<Integral Int>
+    BufferWapper& read_int(Int& ret) {
+        if (buffer_.read_int(ret, offset_)) {
+            offset_ += sizeof(Int);
+        }
+        return *this;
+    }
+
+    BufferWapper& read_string(std::string& str, ssize_t size) {
+        str.resize(size);
+        ssize_t read_size = buffer_.read_string(str, offset_);
+        str.resize(read_size);
+        offset_ += read_size;
+        return *this;
+    }
+
+private:
+    const BufferType& buffer_;
+    ssize_t offset_;
+};
+
+// 针对发送过程中，消息总是层层封装，上层消息作为底层消息的payload，为了减少逐层封装消息时的内存拷贝，特意提供一种可以从后往前写的buffer
 using WriteBuffer = Buffer<BackwardBlock>;
+// 针对接受过程中，先收Head，再收payload的，抽象出一种从前往后写的buffer
 using ReadBuffer = Buffer<ForwardBlock>;
+
+using WriteBufferWapper = BufferWapper<WriteBuffer>; 
+using ReadBufferWapper = BufferWapper<ReadBuffer>; 
+
+template<>
+template<>
+void WriteBuffer::write_buffer<WriteBuffer>(const WriteBuffer& buffer) {
+    if (this == &buffer) {
+        return;
+    }
+
+    for (auto iter = buffer.buffers_.rbegin(); iter != buffer.buffers_.rend(); ++iter) {
+        // 执行BlockHandle的拷贝构造
+        push(*iter);
+        size_ += iter->size();
+    }
+}
+
+template<>
+template<>
+void WriteBuffer::write_buffer<ReadBuffer>(const ReadBuffer& buffer) {
+    buffer.rTraverseBuffers(
+        [this](const void* data, ssize_t size){
+            if (size > 0) {
+                auto block = std::make_shared<ForwardBlock>(size);
+                BlockHandle handle = block->write(data, size);
+                assert(handle.size() == size);
+                push(handle);
+                size_ += size;
+            }
+
+        });
+}
+
+template<>
+template<>
+void ReadBuffer::write_buffer<ReadBuffer>(const ReadBuffer& buffer) {
+    if (this == &buffer) {
+        return;
+    }
+
+    for (auto iter = buffer.buffers_.begin(); iter != buffer.buffers_.end(); ++iter) {
+        // 执行BlockHandle的拷贝构造
+        push(*iter);
+        size_ += iter->size();
+    }
+}
+
+template<>
+template<>
+void ReadBuffer::write_buffer<WriteBuffer>(const WriteBuffer& buffer) {
+    buffer.sTraverseBuffers(
+        [this](const void* data, ssize_t size){
+            if (size > 0) {
+                auto block = std::make_shared<ForwardBlock>(size);
+                BlockHandle handle = block->write(data, size);
+                assert(handle.size() == size);
+                push(handle);
+                size_ += size;
+            }
+
+        });
+}
+
+template<typename BufferType, Integral Int>
+BufferType& operator<<(BufferType& buffer, Int num) {
+    buffer.write_int(num);
+    return buffer;
+}
+
+template<typename BufferType>
+BufferType& operator<<(BufferType& buffer, std::string_view str) {
+    buffer.write_string(str);
+    return buffer;
+}
 
 #endif

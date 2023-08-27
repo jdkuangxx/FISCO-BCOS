@@ -11,5 +11,5 @@ endif()
 
 if(TESTS)
     enable_testing()
-    add_subdirectory(uinttest)
+    add_subdirectory(unit-test)
 endif()
