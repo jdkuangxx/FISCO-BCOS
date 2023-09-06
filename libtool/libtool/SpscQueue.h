@@ -6,6 +6,9 @@
 #include <memory>
 #include "Macros.h"
 
+namespace alpha
+{
+
 template<typename T>
 class SpscQueue {
 public:
@@ -52,7 +55,7 @@ public:
         size_t read_index = read_index_.load(std::memory_order_acquire);
         size_t next = next_index(write_index);
 
-        if (next = read_index) {
+        if (next == read_index) {
             return false;
         }
 
@@ -191,4 +194,5 @@ private:
     T* buffer_;
 };
 
+}
 #endif

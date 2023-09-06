@@ -1,13 +1,15 @@
 #include "libtool/Log.h"
 #include "libtool/BoostLogInitializer.h"
 
+using namespace alpha;
+
 int main() {
     // 1. 在代码中定义Option
-    base::LogOption option;
+    alpha::LogOption option;
     option.print_tid = true;
     option.enable_console_output = true;
     // 2. 使用定义的Option来初始化Log
-    base::BoostLogInitializer::initializeLog(option);
+    alpha::BoostLogInitializer::initializeLog(option);
     // 3. 使用Log
     LOG(TRACE) << "trace msg";
     LOG(DEBUG) << "debug msg";

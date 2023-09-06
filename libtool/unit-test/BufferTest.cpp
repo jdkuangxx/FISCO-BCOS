@@ -5,14 +5,13 @@
 #include <string_view>
 #include<gtest/gtest.h>
 #include "libtool/Buffer.h"
-#include "libtool/BoostLogInitializer.h"
-#include "libtool/Log.h"
 
 using namespace std; 
+using namespace alpha;
 
 TEST(Buffer, TestWriteBuffer)
 {
-    WriteBuffer buffer;
+    ReverseBuffer buffer;
     std::string testData = "Hello world, jdd 666";
     buffer.set_min_block_size(5);
 
@@ -22,7 +21,7 @@ TEST(Buffer, TestWriteBuffer)
 
     ASSERT_EQ(buffer.size(), sizeof(int) * 2 + testData.size());
 
-    WriteBufferWapper buffer_(buffer, 0);
+    ReverseBufferWapper buffer_(buffer, 0);
 
     std::string str;
     int ret1 = 0;
@@ -42,7 +41,7 @@ TEST(Buffer, TestWriteBuffer)
 
 TEST(Buffer, TestReadBuffer)
 {    
-    ReadBuffer buffer;
+    OrdinalBuffer buffer;
     std::string testData = "Hello world, jdd 666";
     buffer.set_min_block_size(5);
     
@@ -56,7 +55,7 @@ TEST(Buffer, TestReadBuffer)
     int ret1 = 0;
     int ret2 = 0;
 
-    ReadBufferWapper buffer_(buffer, 0);
+    OrdinalBufferWapper buffer_(buffer, 0);
     buffer_.read_int(ret1).read_int(ret2).read_string(str, testData.size());
     
     ASSERT_TRUE(ret1 == 5);
@@ -71,8 +70,8 @@ TEST(Buffer, TestReadBuffer)
 
 TEST(Buffer, TestWrite2ReadBuffer)
 {    
-    WriteBuffer wBuffer;
-    ReadBuffer rBuffer;
+    ReverseBuffer wBuffer;
+    OrdinalBuffer rBuffer;
     std::string testData = "Hello world, jdd 666";
     wBuffer.set_min_block_size(5);
     rBuffer.set_min_block_size(5);
@@ -85,7 +84,6 @@ TEST(Buffer, TestWrite2ReadBuffer)
     rBuffer.write_buffer(wBuffer);
     ASSERT_EQ(wBuffer.size(), sizeof(int) * 2 + testData.size());
     ASSERT_EQ(rBuffer.size(), sizeof(int) * 2 + testData.size());
-
 
     ssize_t offset = 0;
     std::string str(testData.size(), 0);
@@ -104,8 +102,8 @@ TEST(Buffer, TestWrite2ReadBuffer)
 
 TEST(Buffer, TestWrite2WriteBuffer) {
 
-    WriteBuffer wBuffer1;
-    WriteBuffer wBuffer2;
+    ReverseBuffer wBuffer1;
+    ReverseBuffer wBuffer2;
     std::string testData = "Hello world, jdd 666";
     wBuffer1.set_min_block_size(5);
     wBuffer2.set_min_block_size(5);
@@ -136,8 +134,8 @@ TEST(Buffer, TestWrite2WriteBuffer) {
 }
 
 TEST(Buffer, TestRead2WriteBuffer) {
-    ReadBuffer rBuffer;
-    WriteBuffer wBuffer;
+    OrdinalBuffer rBuffer;
+    ReverseBuffer wBuffer;
     std::string testData = "Hello world, jdd 666";
     rBuffer.set_min_block_size(5);
     wBuffer.set_min_block_size(5);
@@ -166,8 +164,8 @@ TEST(Buffer, TestRead2WriteBuffer) {
 }
 
 TEST(Buffer, TestRead2ReadBuffer) {
-    ReadBuffer rBuffer1;
-    ReadBuffer rBuffer2;
+    OrdinalBuffer rBuffer1;
+    OrdinalBuffer rBuffer2;
     std::string testData = "Hello world, jdd 666";
     rBuffer1.set_min_block_size(5);
     rBuffer2.set_min_block_size(5);

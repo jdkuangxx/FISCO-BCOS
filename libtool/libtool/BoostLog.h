@@ -26,7 +26,7 @@
 #undef ERROR
 #endif
 
-namespace base
+namespace alpha
 {
 extern std::string const FileLogger;
 /// the file logger
@@ -57,9 +57,9 @@ void setFileLogLevel(LogLevel const& _level);
 void setStatLogLevel(LogLevel const& _level);
 
 #define LOG(level)                                \
-    if (base::LogLevel::level >= base::c_fileLogLevel) \
+    if (alpha::LogLevel::level >= alpha::c_fileLogLevel) \
     BOOST_LOG_SEV(                                     \
-        base::FileLoggerHandler, (boost::log::trivial::severity_level)(base::LogLevel::level))
+        alpha::FileLoggerHandler, (boost::log::trivial::severity_level)(alpha::LogLevel::level))
 }
 
 #endif

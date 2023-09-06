@@ -6,6 +6,8 @@
 #include <chrono>
 #include <thread>
 
+using namespace alpha;
+
 int main(int argc, char* argv[]) {
     if (argc != 2) {
         std::cout << "Usage:\n"
@@ -13,8 +15,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     // 1. 設定讀取配置文件的方法
-    base::BoostLogInitializer::registerPraseLogOptionFunc(
-        [](const std::string& cfgFile, base::LogOption& option) {
+    alpha::BoostLogInitializer::registerPraseLogOptionFunc(
+        [](const std::string& cfgFile, alpha::LogOption& option) {
             boost::property_tree::ptree _pt;
             boost::property_tree::read_ini(cfgFile, _pt);
             option.enable = _pt.get<bool>("log.enable", true);
@@ -27,7 +29,7 @@ int main(int argc, char* argv[]) {
             option.print_tid = _pt.get<bool>("log.print_tid", true);
         });
     // 2. 使用配置文件来初始化Log
-    base::BoostLogInitializer::initializeLog(std::string(argv[1]));
+    alpha::BoostLogInitializer::initializeLog(std::string(argv[1]));
     // 3. 使用Log
     LOG(TRACE) << "trace msg";
     LOG(DEBUG) << "debug msg";

@@ -11,10 +11,13 @@
 
 #include "Block.h"
 
+namespace alpha 
+{
+
 template <typename T>
 concept Integral = std::is_integral<T>::value;
 
-template<typename BlockType, bool forward = BlockType::is_forward_block>
+template<typename BlockType, bool is_reverse = BlockType::is_reverse_write>
 class Buffer {
 public:
     using Ptr = std::shared_ptr<Buffer>;    
@@ -28,18 +31,18 @@ public:
     DISALLOW_COPY_AND_ASSIGN(Buffer);
 
     void push(BlockHandle handle) {
-        if constexpr (forward) {
-            buffers_.push_back(handle);
-        } else {
+        if constexpr (is_reverse) {
             buffers_.push_front(handle);
+        } else {
+            buffers_.push_back(handle);
         }
     }
 
     const void* nextSrcPos(const void* src, ssize_t size) {
-        if constexpr (forward) {
-            return reinterpret_cast<const uint8_t*>(src) + size;
-        } else {
+        if constexpr (is_reverse) {
             return src;
+        } else {
+            return reinterpret_cast<const uint8_t*>(src) + size;
         }
     }
 
@@ -192,16 +195,16 @@ private:
 };
 
 // 针对发送过程中，消息总是层层封装，上层消息作为底层消息的payload，为了减少逐层封装消息时的内存拷贝，特意提供一种可以从后往前写的buffer
-using WriteBuffer = Buffer<BackwardBlock>;
+using ReverseBuffer = Buffer<ReverseWriteBlock>;
 // 针对接受过程中，先收Head，再收payload的，抽象出一种从前往后写的buffer
-using ReadBuffer = Buffer<ForwardBlock>;
+using OrdinalBuffer = Buffer<OrdinalWriteBlock>;
 
-using WriteBufferWapper = BufferWapper<WriteBuffer>; 
-using ReadBufferWapper = BufferWapper<ReadBuffer>; 
+using ReverseBufferWapper = BufferWapper<ReverseBuffer>; 
+using OrdinalBufferWapper = BufferWapper<OrdinalBuffer>; 
 
 template<>
 template<>
-void WriteBuffer::write_buffer<WriteBuffer>(const WriteBuffer& buffer) {
+void ReverseBuffer::write_buffer<ReverseBuffer>(const ReverseBuffer& buffer) {
     if (this == &buffer) {
         return;
     }
@@ -215,11 +218,11 @@ void WriteBuffer::write_buffer<WriteBuffer>(const WriteBuffer& buffer) {
 
 template<>
 template<>
-void WriteBuffer::write_buffer<ReadBuffer>(const ReadBuffer& buffer) {
+void ReverseBuffer::write_buffer<OrdinalBuffer>(const OrdinalBuffer& buffer) {
     buffer.rTraverseBuffers(
         [this](const void* data, ssize_t size){
             if (size > 0) {
-                auto block = std::make_shared<ForwardBlock>(size);
+                auto block = std::make_shared<OrdinalWriteBlock>(size);
                 BlockHandle handle = block->write(data, size);
                 assert(handle.size() == size);
                 push(handle);
@@ -231,7 +234,7 @@ void WriteBuffer::write_buffer<ReadBuffer>(const ReadBuffer& buffer) {
 
 template<>
 template<>
-void ReadBuffer::write_buffer<ReadBuffer>(const ReadBuffer& buffer) {
+void OrdinalBuffer::write_buffer<OrdinalBuffer>(const OrdinalBuffer& buffer) {
     if (this == &buffer) {
         return;
     }
@@ -245,17 +248,16 @@ void ReadBuffer::write_buffer<ReadBuffer>(const ReadBuffer& buffer) {
 
 template<>
 template<>
-void ReadBuffer::write_buffer<WriteBuffer>(const WriteBuffer& buffer) {
+void OrdinalBuffer::write_buffer<ReverseBuffer>(const ReverseBuffer& buffer) {
     buffer.sTraverseBuffers(
         [this](const void* data, ssize_t size){
             if (size > 0) {
-                auto block = std::make_shared<ForwardBlock>(size);
+                auto block = std::make_shared<OrdinalWriteBlock>(size);
                 BlockHandle handle = block->write(data, size);
                 assert(handle.size() == size);
                 push(handle);
                 size_ += size;
             }
-
         });
 }
 
@@ -269,6 +271,8 @@ template<typename BufferType>
 BufferType& operator<<(BufferType& buffer, std::string_view str) {
     buffer.write_string(str);
     return buffer;
+}
+
 }
 
 #endif

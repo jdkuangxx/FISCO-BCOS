@@ -28,7 +28,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <signal.h>
 
-using namespace base;
+using namespace alpha;
 
 #define BOOST_LOG_RELOAD_LOG_LEVEL SIGUSR2
 

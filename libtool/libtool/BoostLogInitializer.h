@@ -40,7 +40,7 @@
 
 #include "BoostLog.h"
 
-namespace base
+namespace alpha
 {
 
 struct LogOption {

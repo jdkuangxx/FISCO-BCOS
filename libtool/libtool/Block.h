@@ -6,6 +6,7 @@
 #include <memory>
 #include "Macros.h"
 
+namespace alpha {
 class BlockHandle;
 class BlockBase : public std::enable_shared_from_this<BlockBase> {
 public:
@@ -89,15 +90,16 @@ private:
     ssize_t size_;
 };
 
-class BackwardBlock :  public BlockBase {
+// 从后往前写入的Block
+class ReverseWriteBlock :  public BlockBase {
 public:
-    using Ptr = std::shared_ptr<BackwardBlock>;
-    static const bool is_forward_block = false;
-    BackwardBlock() : BlockBase() {}
+    using Ptr = std::shared_ptr<ReverseWriteBlock>;
+    static const bool is_reverse_write = true;
+    ReverseWriteBlock() : BlockBase() {}
 
-    BackwardBlock(ssize_t size) : BlockBase(size) {}
+    ReverseWriteBlock(ssize_t size) : BlockBase(size) {}
 
-    ~BackwardBlock() = default;
+    ~ReverseWriteBlock() = default;
     
     // | unused | reserve | used |
     //       end <---- begin
@@ -123,15 +125,16 @@ private:
     }
 };
 
-class ForwardBlock  :  public BlockBase  {
+// 从前往后写入的Block
+class OrdinalWriteBlock :  public BlockBase  {
 public:
-    using Ptr = std::shared_ptr<ForwardBlock>;
-    static const bool is_forward_block = true;
-    ForwardBlock() : BlockBase() {}
+    using Ptr = std::shared_ptr<OrdinalWriteBlock>;
+    static const bool is_reverse_write = false;
+    OrdinalWriteBlock() : BlockBase() {}
 
-    ForwardBlock(ssize_t size) : BlockBase(size) {}
+    OrdinalWriteBlock(ssize_t size) : BlockBase(size) {}
 
-    ~ForwardBlock() = default;
+    ~OrdinalWriteBlock() = default;
     
     // | used | reserve | unused |
     //       begin ----> end
@@ -156,5 +159,5 @@ private:
         return reinterpret_cast<uint8_t*>(buffer_) + offset_;
     }
 };
-
+}
 #endif
